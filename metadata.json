@@ -1,0 +1,6 @@
+{
+  "name": "Pro GamerBattle",
+  "description": "Esports battle gaming tournament platform with real-time custom room lobbies, credential delivery, and wallet system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

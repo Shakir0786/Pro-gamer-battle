@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "818724583402",
+    "firebase_url": "https://new-project-bf7df-default-rtdb.firebaseio.com",
+    "project_id": "new-project-bf7df",
+    "storage_bucket": "new-project-bf7df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:818724583402:android:4feefc52796ba8c57b6493",
+        "android_client_info": {
+          "package_name": "progamerbattle.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "818724583402-0soqkorj9e33oho3on0hvfe42sdmvp7q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpEfyJMQ8ILEcVT9BT7jzkFpao3BcghT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "818724583402-0soqkorj9e33oho3on0hvfe42sdmvp7q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
