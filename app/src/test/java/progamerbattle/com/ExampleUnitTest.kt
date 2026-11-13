@@ -230,4 +230,13 @@ class ExampleUnitTest {
             uid = "test-player-1",
             ign = "HeroGamer",
             uidNumber = "12345678",
-            
+            mobile = "9876543210"
+        )
+        val joined = repo.joinMatch(createdMatch.id, player)
+        assertTrue(joined)
+
+        val updated = repo.matches.value.first { it.id == createdMatch.id }
+        assertEquals(1, updated.joinedPlayersCount)
+        assertTrue(updated.joinedPlayerUids.contains("test-player-1"))
+    }
+}
