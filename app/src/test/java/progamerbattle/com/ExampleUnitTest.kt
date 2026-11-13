@@ -1,16 +1,36 @@
 package progamerbattle.com
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 import progamerbattle.com.data.AuthRepository
 import progamerbattle.com.model.MatchType
 import progamerbattle.com.model.TournamentMatch
 import progamerbattle.com.model.User
 import progamerbattle.com.viewmodel.MIN_WITHDRAWAL_AMOUNT
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ExampleUnitTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun testMobileToInternalEmailMapping() {
@@ -497,33 +517,4 @@ class ExampleUnitTest {
         // Verify Top 10 Prize calculations
         assertEquals(350.0, survivalMatch.getSurvivalPrizeForRank(1), 0.01) // 35%
         assertEquals(200.0, survivalMatch.getSurvivalPrizeForRank(2), 0.01) // 20%
-        assertEquals(120.0, survivalMatch.getSurvivalPrizeForRank(3), 0.01) // 12%
-        assertEquals(80.0, survivalMatch.getSurvivalPrizeForRank(4), 0.01)  // 8%
-        assertEquals(60.0, survivalMatch.getSurvivalPrizeForRank(5), 0.01)  // 6%
-        assertEquals(50.0, survivalMatch.getSurvivalPrizeForRank(6), 0.01)  // 5%
-        assertEquals(40.0, survivalMatch.getSurvivalPrizeForRank(7), 0.01)  // 4%
-        assertEquals(40.0, survivalMatch.getSurvivalPrizeForRank(8), 0.01)  // 4%
-        assertEquals(30.0, survivalMatch.getSurvivalPrizeForRank(9), 0.01)  // 3%
-        assertEquals(30.0, survivalMatch.getSurvivalPrizeForRank(10), 0.01) // 3%
-        assertEquals(0.0, survivalMatch.getSurvivalPrizeForRank(11), 0.01)  // Rank 11+ get 0
-
-        // Total of top 10 must equal exactly 1000.0
-        val sumTop10 = (1..10).sumOf { survivalMatch.getSurvivalPrizeForRank(it) }
-        assertEquals(1000.0, sumTop10, 0.01)
-
-        // Verify participant ranking assignment for completed match
-        val rankings = survivalMatch.getParticipantRankings()
-        assertEquals(12, rankings.size)
-        assertEquals(350.0, rankings[0].earnedAmount, 0.01)
-        assertEquals(200.0, rankings[1].earnedAmount, 0.01)
-        assertEquals(120.0, rankings[2].earnedAmount, 0.01)
-        assertEquals(80.0, rankings[3].earnedAmount, 0.01)
-        assertEquals(60.0, rankings[4].earnedAmount, 0.01)
-        assertEquals(50.0, rankings[5].earnedAmount, 0.01)
-        assertEquals(40.0, rankings[6].earnedAmount, 0.01)
-        assertEquals(40.0, rankings[7].earnedAmount, 0.01)
-        assertEquals(30.0, rankings[8].earnedAmount, 0.01)
-        assertEquals(30.0, rankings[9].earnedAmount, 0.01)
-        assertEquals(0.0, rankings[10].earnedAmount, 0.01)
-    }
-}
+        assertEquals(120.0
