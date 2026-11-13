@@ -114,4 +114,5 @@ dependencies {
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
+  testImplementation("junit:junit:4.13.2")
 }
