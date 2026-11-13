@@ -273,7 +273,15 @@ class AdminViewModel(
         val winning = _uiState.value.editWinningInput.toDoubleOrNull() ?: 0.0
         val bonus = _uiState.value.editBonusInput.toDoubleOrNull() ?: 0.0
 
+        val winningDiff = winning - user.winningBalance
         userRegistry.updateBalance(user.mobileNumber, deposit, winning, bonus)
+        if (winningDiff > 0.0) {
+            walletRepository.recordWinnings(
+                matchTitle = "Admin Winning Credit",
+                amount = winningDiff,
+                mobile = user.mobileNumber
+            )
+        }
         _uiState.update {
             it.copy(
                 isUserBalanceDialogOpen = false,
@@ -893,7 +901,7 @@ class AdminViewModel(
             participants = participantsWithResults
         )
 
-        // Distribute winnings to registered player wallets
+        // Distribute winnings to registered player wallets & record in transaction history
         var totalDistributed = 0.0
         participantsWithResults.forEachIndexed { index, participant ->
             val rankNumber = if (currentMatch.isSurvivalMode) {
@@ -919,6 +927,33 @@ class AdminViewModel(
                 totalDistributed += rewardEarned
                 userRegistry.creditTournamentWinning(participant.name, rewardEarned)
                 userRegistry.creditTournamentWinning(participant.uidNumber, rewardEarned)
+
+                // Find player's registered mobile number so transaction history updates live
+                val matchedEnrolled = currentMatch.enrolledPlayers.firstOrNull {
+                    (participant.uid.isNotBlank() && it.uid == participant.uid) ||
+                    it.ign.equals(participant.name, ignoreCase = true) ||
+                    (participant.uidNumber.isNotBlank() && it.uidNumber == participant.uidNumber)
+                }
+                val matchedUser = userRegistry.allUsers.value.firstOrNull {
+                    (participant.uid.isNotBlank() && it.uid == participant.uid) ||
+                    it.ffIgn.equals(participant.name, ignoreCase = true) ||
+                    (participant.uidNumber.isNotBlank() && it.ffUidNumber == participant.uidNumber) ||
+                    it.mobileNumber == participant.name
+                }
+                val targetMobile = matchedEnrolled?.mobile?.takeIf { it.isNotBlank() }
+                    ?: matchedUser?.mobileNumber?.takeIf { it.isNotBlank() }
+                    ?: ""
+
+                if (targetMobile.isNotBlank()) {
+                    walletRepository.recordWinnings(
+                        matchTitle = currentMatch.title,
+                        amount = rewardEarned,
+                        mobile = targetMobile,
+                        kills = participant.kills,
+                        rank = rankNumber,
+                        matchId = currentMatch.id
+                    )
+                }
             }
         }
 
