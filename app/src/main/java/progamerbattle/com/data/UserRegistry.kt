@@ -22,9 +22,13 @@ class UserRegistry private constructor(
     private val context: Context? = null
 ) {
     private val prefs: SharedPreferences? = context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val realtimeDatabase: FirebaseDatabase? = try {
-        FirebaseDatabase.getInstance("https://new-project-bf7df-default-rtdb.firebaseio.com")
-    } catch (_: Throwable) {
+    private val realtimeDatabase: FirebaseDatabase? = if (context != null) {
+        try {
+            FirebaseDatabase.getInstance("https://new-project-bf7df-default-rtdb.firebaseio.com")
+        } catch (_: Throwable) {
+            null
+        }
+    } else {
         null
     }
 
@@ -183,9 +187,6 @@ class UserRegistry private constructor(
         } catch (_: Exception) {}
     }
 
-    /**
-     * Records a new sign up or updates an existing user profile and active status.
-     */
     fun recordUser(user: User, isOnline: Boolean = true) {
         val now = System.currentTimeMillis()
         val cleanMobile = user.mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
@@ -210,9 +211,6 @@ class UserRegistry private constructor(
         updateActiveUsers(_allUsers.value)
     }
 
-    /**
-     * Mark user as online upon login or active session restore
-     */
     fun markUserOnline(mobileNumber: String) {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         _allUsers.update { currentList ->
@@ -227,9 +225,6 @@ class UserRegistry private constructor(
         updateActiveUsers(_allUsers.value)
     }
 
-    /**
-     * Mark user as offline upon logout
-     */
     fun markUserOffline(mobileNumber: String) {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         _allUsers.update { currentList ->
@@ -271,9 +266,6 @@ class UserRegistry private constructor(
         } catch (_: Throwable) {}
     }
 
-    /**
-     * Gift bonus cash to a player from the Admin Panel
-     */
     fun giftBonus(mobileNumber: String, amount: Double) {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var updatedUser: User? = null
@@ -292,9 +284,6 @@ class UserRegistry private constructor(
         updateActiveUsers(_allUsers.value)
     }
 
-    /**
-     * Toggle ban/suspend status for a user
-     */
     fun toggleBan(mobileNumber: String) {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         _allUsers.update { currentList ->
@@ -310,9 +299,6 @@ class UserRegistry private constructor(
         updateActiveUsers(_allUsers.value)
     }
 
-    /**
-     * Delete user account permanently from registry and clear active session if matching
-     */
     fun deleteUser(mobileNumber: String): Boolean {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var removed = false
@@ -324,7 +310,6 @@ class UserRegistry private constructor(
         }
         updateActiveUsers(_allUsers.value)
 
-        // If the deleted user is currently the active session in UserSessionManager, clear it
         try {
             context?.let { ctx ->
                 val sessionManager = UserSessionManager(ctx)
@@ -337,9 +322,6 @@ class UserRegistry private constructor(
         return removed
     }
 
-    /**
-     * Update user balance (Deposit, Winning, Bonus) directly
-     */
     fun updateBalance(mobileNumber: String, deposit: Double, winning: Double, bonus: Double): Boolean {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var updatedUser: User? = null
@@ -363,9 +345,6 @@ class UserRegistry private constructor(
         return updatedUser != null
     }
 
-    /**
-     * Adjust user balance by adding/deducting amounts
-     */
     fun adjustBalance(mobileNumber: String, depositDelta: Double, winningDelta: Double, bonusDelta: Double): Boolean {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var updatedUser: User? = null
@@ -387,7 +366,6 @@ class UserRegistry private constructor(
         if (updatedUser != null) {
             syncUserBalancesToCloudAndSession(updatedUser!!)
         } else if (cleanMobile.isNotBlank() && realtimeDatabase != null) {
-            // Remote player fallback: adjust directly in Firebase RTDB if not cached in local UserRegistry
             try {
                 val userRef = realtimeDatabase.getReference("users").child(cleanMobile)
                 userRef.get().addOnSuccessListener { snap ->
@@ -406,9 +384,6 @@ class UserRegistry private constructor(
         return updatedUser != null
     }
 
-    /**
-     * Credits match winnings directly to a player's winning balance.
-     */
     fun creditTournamentWinning(playerIdentifier: String, winningAmount: Double): Boolean {
         if (winningAmount <= 0.0) return false
         val cleanId = playerIdentifier.trim()
@@ -436,9 +411,6 @@ class UserRegistry private constructor(
         return updatedUsers.isNotEmpty()
     }
 
-    /**
-     * Refund entry fee for a cancelled match to an enrolled user
-     */
     fun refundMatchEntry(mobileNumber: String, matchId: String, amount: Double): Boolean {
         val cleanMobile = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var updated = false
@@ -460,17 +432,11 @@ class UserRegistry private constructor(
         return updated
     }
 
-    /**
-     * Find user by mobile number
-     */
     fun findUserByMobile(mobileNumber: String): User? {
         val clean = mobileNumber.trim().replace("+91", "").replace(" ", "").replace("-", "")
         return _allUsers.value.firstOrNull { it.mobileNumber == clean }
     }
 
-    /**
-     * Find user by unique referral code or phone number
-     */
     fun findUserByReferralCode(rawCode: String): User? {
         val clean = rawCode.trim().uppercase()
         if (clean.isBlank()) return null
@@ -481,10 +447,6 @@ class UserRegistry private constructor(
         }
     }
 
-    /**
-     * Record a newly registered friend under referrer's account in PENDING status.
-     * The ₹10 reward stays PENDING until the friend deposits at least ₹10.
-     */
     fun recordPendingReferral(
         referrerMobile: String,
         refereeMobile: String,
@@ -494,7 +456,7 @@ class UserRegistry private constructor(
         val cleanReferrer = referrerMobile.trim().replace("+91", "").replace(" ", "").replace("-", "")
         val cleanReferee = refereeMobile.trim().replace("+91", "").replace(" ", "").replace("-", "")
         if (cleanReferrer.isBlank() || cleanReferrer == cleanReferee) {
-            return false // Prevent self-referral
+            return false
         }
 
         val refRecord = ReferralRecord(
@@ -508,7 +470,6 @@ class UserRegistry private constructor(
             registeredAt = System.currentTimeMillis()
         )
 
-        // Increment total referrals count on referrer (money stays pending until claimed)
         _allUsers.update { list ->
             val newList = list.map { user ->
                 if (user.mobileNumber == cleanReferrer) {
@@ -520,7 +481,6 @@ class UserRegistry private constructor(
         }
         updateActiveUsers(_allUsers.value)
 
-        // Update local session if referrer is currently logged in on this device
         try {
             context?.let { ctx ->
                 val sessionManager = UserSessionManager(ctx)
@@ -537,13 +497,9 @@ class UserRegistry private constructor(
         return true
     }
 
-    /**
-     * Called when a player adds cash (deposit).
-     * If deposit amount >= ₹10, any pending referral for this player unlocks with CLAIM button!
-     */
     fun recordDepositAdded(refereeMobile: String, amount: Double) {
         val cleanReferee = refereeMobile.trim().replace("+91", "").replace(" ", "").replace("-", "")
-        if (amount < 10.0) return // Friend must add minimum ₹10 to unlock referral reward
+        if (amount < 10.0) return
 
         var updated = false
         _referrals.update { list ->
@@ -561,10 +517,6 @@ class UserRegistry private constructor(
         }
     }
 
-    /**
-     * Called when the referrer clicks "CLAIM" on a claimable referral.
-     * Credits ₹10 directly into the referrer's BONUS WALLET ONLY, updates status to SUCCESS.
-     */
     fun claimReferralReward(referralId: String, claimantMobile: String): Boolean {
         val cleanClaimant = claimantMobile.trim().replace("+91", "").replace(" ", "").replace("-", "")
         var claimedRecord: ReferralRecord? = null
@@ -585,7 +537,6 @@ class UserRegistry private constructor(
 
         val ref = claimedRecord ?: return false
 
-        // Credit ₹10 strictly into BONUS WALLET ONLY
         _allUsers.update { list ->
             val newList = list.map { user ->
                 if (user.mobileNumber == cleanClaimant) {
@@ -600,7 +551,6 @@ class UserRegistry private constructor(
         }
         updateActiveUsers(_allUsers.value)
 
-        // Record in Wallet ledger
         try {
             WalletRepository.getInstance().recordReferralCredit(
                 mobile = cleanClaimant,
@@ -609,7 +559,6 @@ class UserRegistry private constructor(
             )
         } catch (_: Throwable) {}
 
-        // Update active session on this device
         try {
             context?.let { ctx ->
                 val sessionManager = UserSessionManager(ctx)
@@ -627,9 +576,6 @@ class UserRegistry private constructor(
         return true
     }
 
-    /**
-     * Backward-compatibility wrapper for instant registration reward
-     */
     fun creditReferralReward(referrerMobile: String, refereeMobile: String, refereeName: String): Boolean {
         return recordPendingReferral(referrerMobile, refereeMobile, refereeName, refereeName)
     }
