@@ -96,6 +96,8 @@ dependencies {
   implementation(platform(libs.firebase.bom))
   implementation("com.google.firebase:firebase-database")
   implementation("com.google.firebase:firebase-auth")
+  implementation("com.google.firebase:firebase-firestore")
+  implementation("com.google.firebase:firebase-config")
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
