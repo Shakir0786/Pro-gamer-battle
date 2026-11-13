@@ -1,10 +1,8 @@
 package progamerbattle.com.ui.screens
 
 import android.widget.Toast
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.HourglassBottom
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SportsEsports
@@ -52,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -64,11 +59,9 @@ import progamerbattle.com.model.MatchStatus
 import progamerbattle.com.model.TournamentMatch
 import progamerbattle.com.model.User
 import progamerbattle.com.ui.components.GoToRoomDialog
-import progamerbattle.com.ui.components.RoomCredentialCard
 import progamerbattle.com.ui.theme.CarbonBackground
 import progamerbattle.com.ui.theme.CarbonBorder
 import progamerbattle.com.ui.theme.CarbonCard
-import progamerbattle.com.ui.theme.CarbonCardElevated
 import progamerbattle.com.ui.theme.DangerRed
 import progamerbattle.com.ui.theme.DeepAmber
 import progamerbattle.com.ui.theme.FlameOrange
@@ -78,9 +71,6 @@ import progamerbattle.com.ui.theme.TextMuted
 import progamerbattle.com.ui.theme.TextPrimary
 import progamerbattle.com.ui.theme.TextSecondary
 import progamerbattle.com.viewmodel.MatchViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun MyMatchesScreen(
@@ -195,7 +185,10 @@ fun MyMatchesScreen(
             } else {
                 items(filteredMatches, key = { it.id }) { match ->
                     when (match.status) {
-                        MatchStatus.COMPLETED -> CompletedMatchCard(match = match)
+                        MatchStatus.COMPLETED -> CompletedMatchCard(
+                            match = match,
+                            currentUser = currentUser
+                        )
                         MatchStatus.ONGOING -> OngoingMatchCard(
                             match = match,
                             onViewCredentials = { activeCredentialMatch = match }
@@ -416,7 +409,51 @@ private fun OngoingMatchCard(
 }
 
 @Composable
-private fun CompletedMatchCard(match: TournamentMatch) {
+private fun CompletedMatchCard(
+    match: TournamentMatch,
+    currentUser: User?
+) {
+    val participantsList = match.customParticipants ?: emptyList()
+
+    // Match logged-in user against customParticipants by uid, IGN, FF UID number, or mobile
+    val matchedIndex = if (currentUser != null) {
+        val userUid = currentUser.uid.trim()
+        val userIgn = currentUser.ffIgn.trim()
+        val userInGameName = currentUser.inGameName.trim()
+        val userFfUid = currentUser.ffUidNumber.trim()
+        val userInGameUid = currentUser.inGameUid.trim()
+        val userMobile = currentUser.mobileNumber.trim()
+
+        participantsList.indexOfFirst { p ->
+            (userUid.isNotEmpty() && p.uid.trim() == userUid) ||
+            (userIgn.isNotEmpty() && p.name.trim().equals(userIgn, ignoreCase = true)) ||
+            (userInGameName.isNotEmpty() && p.name.trim().equals(userInGameName, ignoreCase = true)) ||
+            (userFfUid.isNotEmpty() && p.uidNumber.trim() == userFfUid) ||
+            (userInGameUid.isNotEmpty() && p.uidNumber.trim() == userInGameUid) ||
+            (userMobile.isNotEmpty() && p.name.trim() == userMobile)
+        }
+    } else -1
+
+    val matchedParticipant = if (matchedIndex >= 0) participantsList[matchedIndex] else null
+    val resolvedKills = matchedParticipant?.kills ?: match.userKillCount
+
+    val resolvedWinnings: Double = if (matchedParticipant != null && matchedIndex >= 0) {
+        val rankNumber = matchedIndex + 1
+        if (match.isSurvivalMode) {
+            match.getSurvivalPrizeForRank(rankNumber)
+        } else {
+            val rankBonus = when (rankNumber) {
+                1 -> match.perKillReward * 5.0
+                2 -> match.perKillReward * 2.5
+                3 -> match.perKillReward * 1.5
+                else -> 0.0
+            }
+            (matchedParticipant.kills * match.perKillReward) + rankBonus
+        }
+    } else {
+        match.userWinnings
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -485,7 +522,7 @@ private fun CompletedMatchCard(match: TournamentMatch) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Your Kills: ${match.userKillCount}",
+                            text = "Your Kills: $resolvedKills",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -499,9 +536,9 @@ private fun CompletedMatchCard(match: TournamentMatch) {
                         color = TextSecondary
                     )
                     Text(
-                        text = if (match.userWinnings > 0) "+₹${match.userWinnings.toInt()}" else "₹0",
+                        text = if (resolvedWinnings > 0.0) "+₹${resolvedWinnings.toInt()}" else "₹0",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                        color = if (match.userWinnings > 0) NeonGreen else TextSecondary
+                        color = if (resolvedWinnings > 0.0) NeonGreen else TextSecondary
                     )
                 }
             }
