@@ -415,12 +415,11 @@ private fun CompletedMatchCard(
 ) {
     val participantsList = match.customParticipants ?: emptyList()
 
-    // Match logged-in user against customParticipants by uid, IGN, FF UID number, or mobile
+    // Match logged-in user against customParticipants by uid, IGN, inGameName, inGameUid, or mobile
     val matchedIndex = if (currentUser != null) {
         val userUid = currentUser.uid.trim()
         val userIgn = currentUser.ffIgn.trim()
         val userInGameName = currentUser.inGameName.trim()
-        val userFfUid = currentUser.ffUidNumber.trim()
         val userInGameUid = currentUser.inGameUid.trim()
         val userMobile = currentUser.mobileNumber.trim()
 
@@ -428,7 +427,6 @@ private fun CompletedMatchCard(
             (userUid.isNotEmpty() && p.uid.trim() == userUid) ||
             (userIgn.isNotEmpty() && p.name.trim().equals(userIgn, ignoreCase = true)) ||
             (userInGameName.isNotEmpty() && p.name.trim().equals(userInGameName, ignoreCase = true)) ||
-            (userFfUid.isNotEmpty() && p.uidNumber.trim() == userFfUid) ||
             (userInGameUid.isNotEmpty() && p.uidNumber.trim() == userInGameUid) ||
             (userMobile.isNotEmpty() && p.name.trim() == userMobile)
         }
