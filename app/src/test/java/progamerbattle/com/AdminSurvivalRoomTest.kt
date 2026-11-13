@@ -1,5 +1,11 @@
 package progamerbattle.com
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -10,7 +16,10 @@ import progamerbattle.com.data.MatchRepository
 import progamerbattle.com.data.UserRegistry
 import progamerbattle.com.data.WalletRepository
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AdminSurvivalRoomTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var matchRepo: MatchRepository
     private lateinit var walletRepo: WalletRepository
@@ -19,6 +28,7 @@ class AdminSurvivalRoomTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         matchRepo = MatchRepository()
         walletRepo = WalletRepository()
         userRegistry = UserRegistry.getInstance(null)
@@ -27,6 +37,11 @@ class AdminSurvivalRoomTest {
             walletRepository = walletRepo,
             userRegistry = userRegistry
         )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -40,25 +55,23 @@ class AdminSurvivalRoomTest {
         assertEquals("1000", state.newMatchPrizePoolInput)
         assertEquals(10, state.newMatchRankPrizes.size)
         assertEquals(1000.0, state.newMatchRankPrizes.values.sum(), 0.01)
-        assertEquals(350.0, state.newMatchRankPrizes[1] ?: 0.0, 0.01) // Booyah is 35%
-        assertEquals(200.0, state.newMatchRankPrizes[2] ?: 0.0, 0.01) // Rank 2 is 20%
+        assertEquals(350.0, state.newMatchRankPrizes[1] ?: 0.0, 0.01)
+        assertEquals(200.0, state.newMatchRankPrizes[2] ?: 0.0, 0.01)
     }
 
     @Test
     fun testManualPrizePoolInputUpdatesTotalAndRanks() {
         adminViewModel.openCreateSurvivalMatchDialog()
 
-        // Admin types custom prize pool 2500
         adminViewModel.onPrizePoolInputChanged("2500")
         var state = adminViewModel.uiState.value
 
         assertEquals(2500.0, state.newMatchSurvivalPrizePool, 0.01)
         assertEquals("2500", state.newMatchPrizePoolInput)
-        assertEquals(875.0, state.newMatchRankPrizes[1] ?: 0.0, 0.01) // Booyah 35% of 2500 = 875
-        assertEquals(500.0, state.newMatchRankPrizes[2] ?: 0.0, 0.01)  // Rank 2 20% of 2500 = 500
+        assertEquals(875.0, state.newMatchRankPrizes[1] ?: 0.0, 0.01)
+        assertEquals(500.0, state.newMatchRankPrizes[2] ?: 0.0, 0.01)
         assertEquals(2500.0, state.newMatchRankPrizes.values.sum(), 0.01)
 
-        // Admin types custom prize pool 750
         adminViewModel.onPrizePoolInputChanged("750")
         state = adminViewModel.uiState.value
 
@@ -72,7 +85,6 @@ class AdminSurvivalRoomTest {
         adminViewModel.openCreateSurvivalMatchDialog()
         adminViewModel.onPrizePoolInputChanged("1000")
 
-        // Booyah prize starts at 350. Admin increases it to 500 (+150)
         adminViewModel.onUpdateRankPrize(1, 500.0)
         val state = adminViewModel.uiState.value
 
@@ -86,7 +98,6 @@ class AdminSurvivalRoomTest {
         adminViewModel.openCreateSurvivalMatchDialog()
         adminViewModel.onPrizePoolInputChanged("1000")
 
-        // Admin deletes Rank 10 (which had 30.0)
         val rank10Prize = adminViewModel.uiState.value.newMatchRankPrizes[10] ?: 0.0
         adminViewModel.onDeleteRankPrize(10)
         var state = adminViewModel.uiState.value
@@ -96,7 +107,6 @@ class AdminSurvivalRoomTest {
         assertEquals(1000.0 - rank10Prize, state.newMatchSurvivalPrizePool, 0.01)
         assertEquals((1000.0 - rank10Prize).toInt().toString(), state.newMatchPrizePoolInput)
 
-        // Admin adds back Rank 10 with custom prize
         adminViewModel.onAddRankPrize(10, 50.0)
         state = adminViewModel.uiState.value
         assertTrue(state.newMatchRankPrizes.containsKey(10))
@@ -108,11 +118,9 @@ class AdminSurvivalRoomTest {
         adminViewModel.openCreateSurvivalMatchDialog()
         assertTrue(adminViewModel.uiState.value.newMatchIsSurvival)
 
-        // Admin clicks Per Kill Arena
         adminViewModel.onNewMatchIsSurvivalChanged(false)
         assertFalse(adminViewModel.uiState.value.newMatchIsSurvival)
 
-        // Admin switches back to Survival
         adminViewModel.onNewMatchIsSurvivalChanged(true)
         assertTrue(adminViewModel.uiState.value.newMatchIsSurvival)
     }
